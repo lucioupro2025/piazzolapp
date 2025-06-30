@@ -321,6 +321,9 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
         }
     }, [item]);
 
+    const isCategorySelected = !!selectedCategory;
+    const categoryHasMultipleSizes = isCategorySelected && selectedCategory.hasMultipleSizes;
+
     return (
         <>
             <DialogHeader>
@@ -350,7 +353,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="priceFull">
-                                {selectedCategory?.hasMultipleSizes ? 'Precio Principal (Entera/Doc.)' : 'Precio'}
+                                {categoryHasMultipleSizes ? 'Precio Principal (Entera/Doc.)' : 'Precio'}
                             </Label>
                             <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
                         </div>
@@ -362,8 +365,8 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                                 type="number" 
                                 step="0.01" 
                                 defaultValue={item?.priceHalf} 
-                                disabled={!selectedCategory?.hasMultipleSizes}
-                                placeholder={!selectedCategory?.hasMultipleSizes ? 'No aplica' : ''}
+                                disabled={!isCategorySelected || !categoryHasMultipleSizes}
+                                placeholder={!categoryHasMultipleSizes ? 'No aplica' : ''}
                             />
                         </div>
                     </div>
@@ -375,10 +378,10 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                             name="measurementUnit" 
                             defaultValue={item?.measurementUnit} 
                             placeholder="Ej: 1.5L, porción, 500g"
-                            disabled={selectedCategory?.hasMultipleSizes}
+                            disabled={!isCategorySelected || categoryHasMultipleSizes}
                         />
                         <p className="text-xs text-muted-foreground">
-                            {selectedCategory?.hasMultipleSizes 
+                            {categoryHasMultipleSizes
                                 ? 'Para Pizzas o Empanadas, las medidas son automáticas y este campo se deshabilita.' 
                                 : 'Para ítems como bebidas o postres, especifique la medida aquí.'}
                         </p>
