@@ -123,7 +123,8 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Precio</TableHead>
-                  <TableHead>Medida/Precio Sec.</TableHead>
+                  <TableHead>Precio Sec.</TableHead>
+                  <TableHead>Medida</TableHead>
                   <TableHead>Disponibilidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -134,7 +135,8 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category}</TableCell>
                     <TableCell>${item.priceFull}</TableCell>
-                    <TableCell>{item.priceHalf ? `$${item.priceHalf}` : (item.measurementUnit || '-')}</TableCell>
+                    <TableCell>{item.priceHalf ? `$${item.priceHalf}` : '-'}</TableCell>
+                    <TableCell>{item.measurementUnit || '-'}</TableCell>
                     <TableCell>
                         <Badge variant={item.available ? "default" : "destructive"} className={cn(item.available ? 'bg-green-500' : 'bg-red-500', 'text-white')}>
                             {item.available ? 'Sí' : 'No'}
@@ -345,31 +347,44 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                         </Select>
                     </div>
 
-                    {selectedCategory?.hasMultipleSizes ? (
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="priceFull">Precio Principal (Entera/Doc.)</Label>
-                                <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="priceHalf">Precio Secundario (Media/6 Un.)</Label>
-                                <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={item?.priceHalf} />
-                            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="priceFull">
+                                {selectedCategory?.hasMultipleSizes ? 'Precio Principal (Entera/Doc.)' : 'Precio'}
+                            </Label>
+                            <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="priceFull">Precio</Label>
-                                <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="measurementUnit">Unidad de Medida</Label>
-                                <Input id="measurementUnit" name="measurementUnit" defaultValue={item?.measurementUnit} placeholder="ej: 1.5L, unidad, 500ml"/>
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="priceHalf">Precio Secundario (Media/6 Un.)</Label>
+                            <Input 
+                                id="priceHalf" 
+                                name="priceHalf" 
+                                type="number" 
+                                step="0.01" 
+                                defaultValue={item?.priceHalf} 
+                                disabled={!selectedCategory?.hasMultipleSizes}
+                                placeholder={!selectedCategory?.hasMultipleSizes ? 'No aplica' : ''}
+                            />
                         </div>
-                    )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="measurementUnit">Unidad de Medida</Label>
+                        <Input 
+                            id="measurementUnit" 
+                            name="measurementUnit" 
+                            defaultValue={item?.measurementUnit} 
+                            placeholder="Ej: 1.5L, porción, 500g"
+                            disabled={selectedCategory?.hasMultipleSizes}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            {selectedCategory?.hasMultipleSizes 
+                                ? 'Para Pizzas o Empanadas, las medidas son automáticas y este campo se deshabilita.' 
+                                : 'Para ítems como bebidas o postres, especifique la medida aquí.'}
+                        </p>
+                    </div>
                    
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 pt-2">
                         <Switch id="available" name="available" defaultChecked={item?.available ?? true} />
                         <Label htmlFor="available">Disponible</Label>
                     </div>
