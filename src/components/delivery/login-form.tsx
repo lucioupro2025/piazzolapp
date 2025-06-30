@@ -1,13 +1,12 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useActionState, useEffect } from "react";
 import { loginDriver } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { LogIn } from "lucide-react";
-import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const initialState = {
@@ -15,7 +14,7 @@ const initialState = {
 };
 
 export function LoginForm() {
-  const [state, formAction] = useFormState(loginDriver, initialState as any);
+  const [state, formAction] = useActionState(loginDriver, initialState as any);
   const { toast } = useToast();
 
   useEffect(() => {
