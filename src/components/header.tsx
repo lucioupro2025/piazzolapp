@@ -14,7 +14,7 @@ export function Header() {
       <div className="container mx-auto flex h-20 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2" onClick={() => setSheetOpen(false)}>
           <Pizza className="h-8 w-8 text-primary" />
-          <span className="text-3xl font-bold font-headline text-primary">PiazzApp</span>
+          <span className="text-3xl font-bold font-headline text-primary">PIAZZOLApp</span>
         </Link>
         
         {/* Desktop Navigation */}

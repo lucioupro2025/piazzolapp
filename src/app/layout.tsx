@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Header } from '@/components/header';
 
 export const metadata: Metadata = {
-  title: 'PiazzApp',
+  title: 'PIAZZOLApp',
   description: 'Gestión de pedidos para pizzerías.',
 };
 
