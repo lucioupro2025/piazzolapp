@@ -17,8 +17,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Roboto', 'sans-serif'],
-        headline: ['Roboto', 'sans-serif'],
+        body: ['Alegreya', 'sans-serif'],
+        headline: ['Belleza', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
