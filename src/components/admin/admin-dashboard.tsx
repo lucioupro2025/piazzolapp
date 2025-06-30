@@ -317,8 +317,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
         return categories.find(c => c.name === selectedCategoryName);
     }, [selectedCategoryName, categories]);
 
-    const isCategorySelected = !!selectedCategory;
-    const categoryHasMultipleSizes = isCategorySelected ? selectedCategory.hasMultipleSizes : false;
+    const categoryHasMultipleSizes = selectedCategory?.hasMultipleSizes ?? false;
 
     return (
         <>
@@ -354,7 +353,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                             <Label htmlFor="priceFull">
                                 {categoryHasMultipleSizes ? 'Precio Principal (Entera/Doc.)' : 'Precio'}
                             </Label>
-                            <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
+                            <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required disabled={!selectedCategoryName} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="priceHalf">Precio Secundario (Media/6 Un.)</Label>
@@ -364,8 +363,8 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                                 type="number" 
                                 step="0.01" 
                                 defaultValue={item?.priceHalf} 
-                                disabled={!isCategorySelected || !categoryHasMultipleSizes}
-                                placeholder={!isCategorySelected || !categoryHasMultipleSizes ? 'No aplica' : ''}
+                                disabled={!selectedCategoryName || !categoryHasMultipleSizes}
+                                placeholder={!categoryHasMultipleSizes ? 'No aplica' : ''}
                             />
                         </div>
                     </div>
@@ -377,7 +376,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                             name="measurementUnit" 
                             defaultValue={item?.measurementUnit} 
                             placeholder="Ej: 1.5L, porción, 500g"
-                            disabled={!isCategorySelected || categoryHasMultipleSizes}
+                            disabled={!selectedCategoryName || categoryHasMultipleSizes}
                         />
                         <p className="text-xs text-muted-foreground">
                             {categoryHasMultipleSizes
