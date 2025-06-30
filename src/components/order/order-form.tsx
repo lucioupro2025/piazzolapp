@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from '@/components/ui/separator';
 
@@ -391,6 +391,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-headline text-2xl">Seleccionar tamaño para {selectedItem?.name}</DialogTitle>
+            <DialogDescription>Elige una de las opciones disponibles para este producto.</DialogDescription>
           </DialogHeader>
           <div className="py-4 flex justify-around">
             {selectedItem?.category === 'Pizza' && (

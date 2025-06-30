@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -232,6 +232,7 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>{dialogState.data ? 'Editar' : 'Añadir'} Repartidor</DialogTitle>
+                <DialogDescription>Completa los datos del repartidor. La contraseña es obligatoria para nuevos repartidores.</DialogDescription>
             </DialogHeader>
             <form action={(formData) => handleFormSubmit(upsertDeliveryPerson, formData)}>
                  {dialogState.data && <input type="hidden" name="id" value={(dialogState.data as DeliveryPerson).id} />}
@@ -258,6 +259,7 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>{dialogState.data ? 'Editar' : 'Añadir'} Categoría</DialogTitle>
+                <DialogDescription>Crea o edita una categoría para tus productos.</DialogDescription>
             </DialogHeader>
             <form action={(formData) => handleFormSubmit(upsertCategory, formData)}>
                  {dialogState.data && <input type="hidden" name="id" value={(dialogState.data as Category).id} />}
@@ -322,6 +324,9 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
         <>
             <DialogHeader>
                 <DialogTitle>{item ? 'Editar' : 'Añadir'} Producto</DialogTitle>
+                <DialogDescription>
+                    Completa la información del producto. Los campos se habilitarán según la categoría seleccionada.
+                </DialogDescription>
             </DialogHeader>
             <form action={onSubmit}>
                 {item && <input type="hidden" name="id" value={item.id} />}
