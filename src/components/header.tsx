@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Pizza, Menu } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useState } from 'react';
 
 export function Header() {
@@ -42,6 +42,12 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
+              <SheetHeader>
+                <SheetTitle>Menú</SheetTitle>
+                <SheetDescription>
+                  Navegue por las secciones de la aplicación.
+                </SheetDescription>
+              </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8">
                 <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
                   <Link href="/">Tomar Pedido</Link>
