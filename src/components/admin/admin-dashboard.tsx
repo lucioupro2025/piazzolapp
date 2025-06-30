@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FC } from 'react';
+import { useState, useTransition, useMemo, type FC, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MenuItem, DeliveryPerson, Category } from '@/lib/types';
 import { 
@@ -122,8 +122,8 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Precio Principal</TableHead>
-                  <TableHead>Precio Secundario</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Medida/Precio Sec.</TableHead>
                   <TableHead>Disponibilidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -134,7 +134,7 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category}</TableCell>
                     <TableCell>${item.priceFull}</TableCell>
-                    <TableCell>{item.priceHalf ? `$${item.priceHalf}` : '-'}</TableCell>
+                    <TableCell>{item.priceHalf ? `$${item.priceHalf}` : (item.measurementUnit || '-')}</TableCell>
                     <TableCell>
                         <Badge variant={item.available ? "default" : "destructive"} className={cn(item.available ? 'bg-green-500' : 'bg-red-500', 'text-white')}>
                             {item.available ? 'Sí' : 'No'}
@@ -212,52 +212,16 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
         </TabsContent>
       </Tabs>
       
-      {/* Product Dialog */}
       <Dialog open={dialogState.type === 'product'} onOpenChange={(open) => !open && setDialogState({ type: null, data: null})}>
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>{dialogState.data ? 'Editar' : 'Añadir'} Producto</DialogTitle>
-            </DialogHeader>
-            <form action={(formData) => handleFormSubmit(upsertMenuItem, formData)}>
-                {dialogState.data && <input type="hidden" name="id" value={(dialogState.data as MenuItem).id} />}
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Nombre</Label>
-                        <Input id="name" name="name" defaultValue={(dialogState.data as MenuItem)?.name} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="ingredients">Ingredientes</Label>
-                        <Textarea id="ingredients" name="ingredients" defaultValue={(dialogState.data as MenuItem)?.ingredients} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="category">Categoría</Label>
-                        <Select name="category" defaultValue={(dialogState.data as MenuItem)?.category} required>
-                            <SelectTrigger id="category"><SelectValue placeholder="Seleccionar categoría..." /></SelectTrigger>
-                            <SelectContent>
-                                {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="priceFull">Precio Principal</Label>
-                            <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={(dialogState.data as MenuItem)?.priceFull} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="priceHalf">Precio Secundario (opcional)</Label>
-                            <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={(dialogState.data as MenuItem)?.priceHalf} />
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Switch id="available" name="available" defaultChecked={(dialogState.data as MenuItem)?.available ?? true} />
-                        <Label htmlFor="available">Disponible</Label>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
-                    <Button type="submit" disabled={isPending}>{isPending ? "Guardando..." : "Guardar"}</Button>
-                </DialogFooter>
-            </form>
+            <ProductForm
+                key={(dialogState.data as MenuItem)?.id || 'new'}
+                item={dialogState.data as MenuItem | null}
+                categories={categories}
+                isPending={isPending}
+                onSubmit={(formData) => handleFormSubmit(upsertMenuItem, formData)}
+                onClose={() => setDialogState({ type: null, data: null })}
+            />
         </DialogContent>
       </Dialog>
       
@@ -333,6 +297,86 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
     </>
   );
 }
+
+interface ProductFormProps {
+    item: MenuItem | null;
+    categories: Category[];
+    isPending: boolean;
+    onSubmit: (formData: FormData) => void;
+    onClose: () => void;
+}
+
+function ProductForm({ item, categories, isPending, onSubmit, onClose }: ProductFormProps) {
+    const [selectedCategoryName, setSelectedCategoryName] = useState<string | undefined>(item?.category);
+
+    const selectedCategory = useMemo(() => {
+        return categories.find(c => c.name === selectedCategoryName);
+    }, [selectedCategoryName, categories]);
+
+    return (
+        <>
+            <DialogHeader>
+                <DialogTitle>{item ? 'Editar' : 'Añadir'} Producto</DialogTitle>
+            </DialogHeader>
+            <form action={onSubmit}>
+                {item && <input type="hidden" name="id" value={item.id} />}
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" name="name" defaultValue={item?.name} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="ingredients">Ingredientes</Label>
+                        <Textarea id="ingredients" name="ingredients" defaultValue={item?.ingredients} required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Categoría</Label>
+                        <Select name="category" defaultValue={item?.category} onValueChange={setSelectedCategoryName} required>
+                            <SelectTrigger id="category"><SelectValue placeholder="Seleccionar categoría..." /></SelectTrigger>
+                            <SelectContent>
+                                {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {selectedCategory?.hasMultipleSizes ? (
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="priceFull">Precio Principal</Label>
+                                <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="priceHalf">Precio Secundario</Label>
+                                <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={item?.priceHalf} />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="priceFull">Precio</Label>
+                                <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="measurementUnit">Unidad de Medida</Label>
+                                <Input id="measurementUnit" name="measurementUnit" defaultValue={item?.measurementUnit} placeholder="ej: unidad, 500ml"/>
+                            </div>
+                        </div>
+                    )}
+                   
+                    <div className="flex items-center space-x-2">
+                        <Switch id="available" name="available" defaultChecked={item?.available ?? true} />
+                        <Label htmlFor="available">Disponible</Label>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+                    <Button type="submit" disabled={isPending}>{isPending ? "Guardando..." : "Guardar"}</Button>
+                </DialogFooter>
+            </form>
+        </>
+    );
+}
+
 
 const Card: FC<{children: React.ReactNode}> = ({ children }) => (
     <div className="border rounded-lg overflow-hidden">{children}</div>

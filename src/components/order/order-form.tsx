@@ -46,7 +46,7 @@ interface OrderFormProps {
   categories: Category[];
 }
 
-const formatSize = (size: CartItem['size']) => {
+const formatSize = (size: string) => {
     switch(size) {
         case 'entera': return 'Entera';
         case 'media': return 'Media';
@@ -90,7 +90,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
 
   useEffect(() => {
     const numericDelay = parseInt(String(delay), 10);
-    if (isNaN(numericDelay)) {
+    if (!Number.isInteger(numericDelay)) {
         setEstimatedTime('N/A');
         return;
     }
@@ -107,15 +107,16 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
       setIsSizeModalOpen(true);
       setSearchTerm('');
     } else {
+      const size = item.measurementUnit || 'unidad';
       const newItem: CartItem = {
-        id: `${item.id}-unidad-${Date.now()}`,
+        id: `${item.id}-${size}-${Date.now()}`,
         menuItemId: item.id,
         name: item.name,
-        size: 'unidad',
+        size: size,
         quantity: 1,
         unitPrice: item.priceFull,
       };
-      const existingItem = cart.find(cartItem => cartItem.menuItemId === item.id && cartItem.size === 'unidad');
+      const existingItem = cart.find(cartItem => cartItem.menuItemId === item.id && cartItem.size === size);
       if (existingItem) {
         updateQuantity(existingItem.id, existingItem.quantity + 1);
       } else {
@@ -125,7 +126,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
     }
   };
   
-  const handleSelectSize = (size: 'entera' | 'media' | '12' | '6') => {
+  const handleSelectSize = (size: string) => {
     if (!selectedItem) return;
 
     let unitPrice;

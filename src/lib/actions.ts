@@ -51,7 +51,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 }
 
 export async function loginDriver(prevState: { error: string | null }, formData: FormData) {
-    const name = formData.get('name') as string;
+    const name = (formData.get('name') as string || '').trim();
     const password = formData.get('password') as string;
 
     if (!name || !password) {
@@ -86,7 +86,8 @@ export async function upsertMenuItem(formData: FormData) {
     ingredients: formData.get('ingredients') as string,
     category: formData.get('category') as string,
     priceFull: parseFloat(formData.get('priceFull') as string),
-    priceHalf: parseFloat(formData.get('priceHalf') as string) || 0,
+    priceHalf: parseFloat(formData.get('priceHalf') as string) || undefined,
+    measurementUnit: (formData.get('measurementUnit') as string) || undefined,
     available: formData.get('available') === 'on',
   };
 
