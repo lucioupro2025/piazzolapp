@@ -111,6 +111,19 @@ export function KitchenDisplay({ initialOrders, deliveryPeople }: KitchenDisplay
     setOrders(initialOrders);
   }, [initialOrders]);
 
+  // This effect will set up polling to refresh data every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isPending) {
+        startTransition(() => {
+          router.refresh();
+        });
+      }
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [router, isPending]);
+
   const handleStatusChange = (orderId: string, status: OrderStatus) => {
     startTransition(async () => {
       await updateOrderStatus(orderId, status);
