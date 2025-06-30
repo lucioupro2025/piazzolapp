@@ -1,5 +1,5 @@
 import { menuItems, orders, deliveryPeople, categories } from './data';
-import type { OrderStatus } from './types';
+import type { OrderStatus, Sale } from './types';
 
 // Simulate API delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -45,4 +45,24 @@ export async function getDriverOrders(driverId: string) {
   return [...orders]
     .filter(o => o.deliveryPersonId === driverId && o.status === 'listo')
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export async function getSalesData(): Promise<Sale[]> {
+    await delay(100);
+    const deliveredOrders = orders.filter(o => o.status === 'entregado');
+    const salesData: Sale[] = [];
+
+    deliveredOrders.forEach(order => {
+        order.items.forEach((item, index) => {
+            salesData.push({
+                id: `${order.id}-${index}`,
+                date: order.createdAt,
+                productName: `${item.name} (${item.size.charAt(0).toUpperCase() + item.size.slice(1)})`,
+                quantity: item.quantity,
+                totalPrice: item.unitPrice * item.quantity,
+            });
+        });
+    });
+
+    return salesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

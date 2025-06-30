@@ -33,6 +33,23 @@ const initialData = {
   ],
   orders: [
       {
+          id: `P${Date.now() - 600000}`,
+          items: [
+            { menuItemId: '1', name: 'Muzzarella', quantity: 1, size: 'entera', unitPrice: 5800 }, 
+            { menuItemId: '7', name: 'Empanada de Jamón y Queso', quantity: 1, size: '6', unitPrice: 3100 }
+          ],
+          totalAmount: 8900,
+          customerName: 'Lucia Fernandez',
+          customerPhone: '1198765432',
+          address: 'Calle Falsa 123, Springfield',
+          deliveryType: 'envio',
+          delay: 40,
+          estimatedTime: new Date(Date.now() - 500000).toISOString(),
+          status: 'entregado',
+          deliveryPersonId: 'd1',
+          createdAt: new Date(Date.now() - 600000).toISOString(),
+      },
+      {
           id: `P${Date.now() - 300000}`,
           items: [{ menuItemId: '1', name: 'Muzzarella', quantity: 1, size: 'entera', unitPrice: 5800 }],
           totalAmount: 5800,

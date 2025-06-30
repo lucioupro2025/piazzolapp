@@ -29,6 +29,9 @@ export function Header() {
             <Link href="/repartidores">Repartidores</Link>
           </Button>
           <Button variant="ghost" asChild className="text-base">
+            <Link href="/estadisticas">Estadísticas</Link>
+          </Button>
+          <Button variant="ghost" asChild className="text-base">
             <Link href="/admin">Administración</Link>
           </Button>
         </nav>
@@ -57,6 +60,9 @@ export function Header() {
                 </Button>
                 <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
                   <Link href="/repartidores">Repartidores</Link>
+                </Button>
+                <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
+                  <Link href="/estadisticas">Estadísticas</Link>
                 </Button>
                 <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
                   <Link href="/admin">Administración</Link>

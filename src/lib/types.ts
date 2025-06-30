@@ -46,3 +46,11 @@ export type DeliveryPerson = {
   name: string;
   password?: string;
 };
+
+export type Sale = {
+  id: string;
+  date: string;
+  productName: string;
+  quantity: number;
+  totalPrice: number;
+};
