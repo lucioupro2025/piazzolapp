@@ -70,7 +70,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
     resolver: zodResolver(orderSchema),
     defaultValues: {
       delay: 40,
-      deliveryType: 'retiro',
+      deliveryType: 'envio',
     },
   });
 
@@ -80,7 +80,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
   const filteredMenu = useMemo(() => {
     if (!searchTerm) return [];
     return menu.filter(item =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) && item.available
     );
   }, [searchTerm, menu]);
 
@@ -90,7 +90,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
 
   useEffect(() => {
     const numericDelay = parseInt(String(delay), 10);
-    if (!Number.isInteger(numericDelay)) {
+    if (!Number.isInteger(numericDelay) || numericDelay < 0) {
         setEstimatedTime('N/A');
         return;
     }
@@ -144,7 +144,14 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
       quantity: 1,
       unitPrice: unitPrice,
     };
-    setCart(prevCart => [...prevCart, newItem]);
+
+    const existingItem = cart.find(cartItem => cartItem.menuItemId === selectedItem.id && cartItem.size === size);
+    if (existingItem) {
+      updateQuantity(existingItem.id, existingItem.quantity + 1);
+    } else {
+      setCart(prevCart => [...prevCart, newItem]);
+    }
+    
     setIsSizeModalOpen(false);
     setSelectedItem(null);
   };
@@ -179,7 +186,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
         description: 'El pedido se ha enviado a la cocina.',
       });
       setCart([]);
-      reset();
+      reset({ delay: 40, deliveryType: 'envio' });
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -217,21 +224,15 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
                         {filteredMenu.map(item => (
                           <div
                             key={item.id}
-                            onClick={() => item.available && handleAddItem(item)}
-                            className={cn(
-                              "flex justify-between items-center p-3 rounded-lg",
-                              item.available ? 'cursor-pointer hover:bg-accent/50' : 'opacity-50 cursor-not-allowed'
-                            )}
+                            onClick={() => handleAddItem(item)}
+                            className="flex justify-between items-center p-3 rounded-lg cursor-pointer hover:bg-accent/50"
                           >
                             <div>
                               <p className="font-bold">{item.name}</p>
                               <p className="text-sm text-muted-foreground">{item.ingredients}</p>
                             </div>
-                            <span className={cn(
-                              "text-sm font-semibold",
-                              item.available ? 'text-green-600' : 'text-red-600'
-                            )}>
-                              {item.available ? 'Disponible' : 'Agotado'}
+                            <span className="font-semibold text-primary">
+                              ${item.priceFull}
                             </span>
                           </div>
                         ))}
@@ -267,7 +268,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
                 name="deliveryType"
                 control={control}
                 render={({ field }) => (
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex items-center gap-8 pt-2">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center gap-8 pt-2">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="retiro" id="retiro" />
                       <Label htmlFor="retiro" className="text-base">Retiro en local</Label>
@@ -295,7 +296,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
                         name="deliveryPersonId"
                         control={control}
                         render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger><SelectValue placeholder="Seleccionar repartidor..." /></SelectTrigger>
                             <SelectContent>
                             {deliveryPeople.map(person => (
@@ -371,7 +372,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
 
                 <div className="flex justify-between items-center bg-accent/30 p-3 rounded-lg">
                   <p className="font-bold">Hora de entrega estimada:</p>
-                  <p className="text-xl font-bold font-body text-primary">{estimatedTime || 'Calculando...'}</p>
+                  <p className="text-xl font-bold font-body text-primary">{estimatedTime}</p>
                 </div>
               </div>
             </CardContent>

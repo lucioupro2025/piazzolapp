@@ -313,6 +313,12 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
         return categories.find(c => c.name === selectedCategoryName);
     }, [selectedCategoryName, categories]);
 
+    useEffect(() => {
+        if (item?.category) {
+            setSelectedCategoryName(item.category);
+        }
+    }, [item]);
+
     return (
         <>
             <DialogHeader>
@@ -326,7 +332,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                         <Input id="name" name="name" defaultValue={item?.name} required />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="ingredients">Ingredientes</Label>
+                        <Label htmlFor="ingredients">Ingredientes/Descripción</Label>
                         <Textarea id="ingredients" name="ingredients" defaultValue={item?.ingredients} required />
                     </div>
                     <div className="space-y-2">
@@ -342,11 +348,11 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                     {selectedCategory?.hasMultipleSizes ? (
                          <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="priceFull">Precio Principal</Label>
+                                <Label htmlFor="priceFull">Precio Principal (Entera/Doc.)</Label>
                                 <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="priceHalf">Precio Secundario</Label>
+                                <Label htmlFor="priceHalf">Precio Secundario (Media/6 Un.)</Label>
                                 <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={item?.priceHalf} />
                             </div>
                         </div>
@@ -358,7 +364,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="measurementUnit">Unidad de Medida</Label>
-                                <Input id="measurementUnit" name="measurementUnit" defaultValue={item?.measurementUnit} placeholder="ej: unidad, 500ml"/>
+                                <Input id="measurementUnit" name="measurementUnit" defaultValue={item?.measurementUnit} placeholder="ej: 1.5L, unidad, 500ml"/>
                             </div>
                         </div>
                     )}

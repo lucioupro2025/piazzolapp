@@ -52,7 +52,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 
 export async function loginDriver(prevState: { error: string | null }, formData: FormData) {
     const name = (formData.get('name') as string || '').trim();
-    const password = formData.get('password') as string;
+    const password = (formData.get('password') as string || '').trim();
 
     if (!name || !password) {
         return { error: 'Nombre y contraseña son requeridos.' };
@@ -168,6 +168,7 @@ export async function upsertCategory(formData: FormData) {
         });
     }
     revalidatePath('/admin');
+    revalidatePath('/');
 }
 
 export async function deleteCategory(id: string) {
@@ -176,4 +177,5 @@ export async function deleteCategory(id: string) {
         categories.splice(index, 1);
     }
     revalidatePath('/admin');
+    revalidatePath('/');
 }
