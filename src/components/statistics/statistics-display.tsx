@@ -1,7 +1,7 @@
 "use client";
 
-import type { FC } from 'react';
-import type { Sale } from '@/lib/types';
+import { useTransition, type FC } from 'react';
+import type { Sale, Order } from '@/lib/types';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -11,9 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip } from "recharts";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { reopenOrder } from '@/lib/actions';
+import { RefreshCcw } from 'lucide-react';
 
 interface StatisticsDisplayProps {
   sales: Sale[];
+  cancelledOrders: Order[];
 }
 
 const chartConfig = {
@@ -23,7 +28,27 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales }) => {
+export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales, cancelledOrders }) => {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  const handleReopen = (orderId: string) => {
+      startTransition(async () => {
+          try {
+              await reopenOrder(orderId);
+              toast({
+                  title: "Pedido Reactivado",
+                  description: `El pedido #${orderId.slice(-4)} ha sido enviado nuevamente a la cocina.`
+              });
+          } catch (error) {
+              toast({
+                  variant: 'destructive',
+                  title: "Error",
+                  description: "No se pudo reactivar el pedido."
+              })
+          }
+      });
+  }
 
   const { totalRevenue, totalProductsSold, mostSoldProduct } = useMemo(() => {
     let revenue = 0;
@@ -149,6 +174,61 @@ export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales }) => {
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
                         Aún no hay ventas registradas. Las ventas de pedidos "Entregado" aparecerán aquí.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>Pedidos Cancelados</CardTitle>
+          <CardDescription>
+            Lista de pedidos que fueron cancelados. Puedes reactivarlos para enviarlos de nuevo a la cocina.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cancelledOrders.length > 0 ? cancelledOrders.map(order => (
+                  <TableRow key={order.id}>
+                    <TableCell>{format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })}</TableCell>
+                    <TableCell className="font-medium">{order.customerName}</TableCell>
+                    <TableCell>
+                      <ul className="list-disc list-inside text-xs">
+                        {order.items.map((item, idx) => (
+                          <li key={idx}>{item.quantity}x {item.name} ({item.size})</li>
+                        ))}
+                      </ul>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReopen(order.id)}
+                        disabled={isPending}
+                      >
+                        <RefreshCcw className="mr-2 h-4 w-4" />
+                        Reactivar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No hay pedidos cancelados.
                     </TableCell>
                   </TableRow>
                 )}

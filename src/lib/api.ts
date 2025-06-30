@@ -66,3 +66,12 @@ export async function getSalesData(): Promise<Sale[]> {
 
     return salesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
+
+export async function getCancelledOrders() {
+  await delay(100);
+  // Return a copy to avoid mutation issues
+  const cancelled = [...orders]
+    .filter(o => o.status === 'cancelado')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return cancelled;
+}

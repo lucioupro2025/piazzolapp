@@ -92,6 +92,19 @@ const initialData = {
           status: 'listo',
           deliveryPersonId: 'd2',
           createdAt: new Date(Date.now() - 100000).toISOString(),
+      },
+       {
+          id: `P${Date.now() - 50000}`,
+          items: [{ menuItemId: '6', name: 'Empanada de Carne', quantity: 1, size: '12', unitPrice: 7200 }],
+          totalAmount: 7200,
+          customerName: 'Cliente Distraído',
+          customerPhone: '1111111111',
+          address: 'Retira en Local',
+          deliveryType: 'retiro',
+          delay: 20,
+          estimatedTime: new Date(Date.now() + 5 * 60000).toISOString(),
+          status: 'cancelado',
+          createdAt: new Date(Date.now() - 50000).toISOString(),
       }
   ]
 };

@@ -47,6 +47,16 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     orders[orderIndex].status = status;
     revalidatePath('/cocina');
     revalidatePath('/repartidores');
+    revalidatePath('/estadisticas');
+  }
+}
+
+export async function reopenOrder(orderId: string) {
+  const orderIndex = orders.findIndex(o => o.id === orderId);
+  if (orderIndex !== -1 && orders[orderIndex].status === 'cancelado') {
+    orders[orderIndex].status = 'nuevo';
+    revalidatePath('/cocina');
+    revalidatePath('/estadisticas');
   }
 }
 
