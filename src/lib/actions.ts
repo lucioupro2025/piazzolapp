@@ -87,6 +87,7 @@ export async function upsertMenuItem(formData: FormData) {
     category: formData.get('category') as string,
     priceFull: parseFloat(formData.get('priceFull') as string),
     priceHalf: parseFloat(formData.get('priceHalf') as string) || undefined,
+    priceUnit: parseFloat(formData.get('priceUnit') as string) || undefined,
     measurementUnit: (formData.get('measurementUnit') as string) || undefined,
     available: formData.get('available') === 'on',
   };

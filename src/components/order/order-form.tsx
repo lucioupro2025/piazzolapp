@@ -130,10 +130,20 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
     if (!selectedItem) return;
 
     let unitPrice;
-    if (size === 'entera' || size === '12') {
-        unitPrice = selectedItem.priceFull;
-    } else {
-        unitPrice = selectedItem.priceHalf || 0;
+    switch (size) {
+        case 'entera':
+        case '12':
+            unitPrice = selectedItem.priceFull;
+            break;
+        case 'media':
+        case '6':
+            unitPrice = selectedItem.priceHalf || 0;
+            break;
+        case 'unidad':
+            unitPrice = selectedItem.priceUnit || 0;
+            break;
+        default:
+            unitPrice = 0;
     }
 
     const newItem: CartItem = {
@@ -400,13 +410,14 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories
                 {selectedItem.priceHalf && selectedItem.priceHalf > 0 && <Button size="lg" variant="outline" onClick={() => handleSelectSize('media')}>Media - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>}
               </>
             )}
-            {selectedItem?.category === 'Empanada' && (
-              <>
+          </div>
+           {selectedItem?.category === 'Empanada' && (
+              <div className="py-4 flex flex-wrap justify-center gap-4">
                 <Button size="lg" onClick={() => handleSelectSize('12')}>Docena - ${selectedItem.priceFull.toLocaleString('es-AR')}</Button>
                 {selectedItem.priceHalf && selectedItem.priceHalf > 0 && <Button size="lg" variant="outline" onClick={() => handleSelectSize('6')}>Media Docena - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>}
-              </>
+                {selectedItem.priceUnit && selectedItem.priceUnit > 0 && <Button size="lg" variant="outline" onClick={() => handleSelectSize('unidad')}>Unidad - ${selectedItem.priceUnit.toLocaleString('es-AR')}</Button>}
+              </div>
             )}
-          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsSizeModalOpen(false)}>Cancelar</Button>
           </DialogFooter>

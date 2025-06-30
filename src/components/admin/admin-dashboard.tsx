@@ -122,9 +122,9 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Precio</TableHead>
-                  <TableHead>Precio Sec.</TableHead>
-                  <TableHead>Medida</TableHead>
+                  <TableHead>Pr. Principal</TableHead>
+                  <TableHead>Pr. Secundario</TableHead>
+                  <TableHead>Pr. Unidad</TableHead>
                   <TableHead>Disponibilidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -136,7 +136,7 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
                     <TableCell>{item.category}</TableCell>
                     <TableCell>${item.priceFull}</TableCell>
                     <TableCell>{item.priceHalf ? `$${item.priceHalf}` : '-'}</TableCell>
-                    <TableCell>{item.measurementUnit || '-'}</TableCell>
+                    <TableCell>{item.priceUnit ? `$${item.priceUnit}` : '-'}</TableCell>
                     <TableCell>
                         <Badge variant={item.available ? "default" : "destructive"} className={cn(item.available ? 'bg-green-500' : 'bg-red-500', 'text-white')}>
                             {item.available ? 'Sí' : 'No'}
@@ -215,7 +215,7 @@ export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminD
       </Tabs>
       
       <Dialog open={dialogState.type === 'product'} onOpenChange={(open) => !open && setDialogState({ type: null, data: null})}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
             <ProductForm
                 key={(dialogState.data as MenuItem)?.id || 'new'}
                 item={dialogState.data as MenuItem | null}
@@ -318,6 +318,8 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
     }, [selectedCategoryName, categories]);
 
     const categoryHasMultipleSizes = selectedCategory?.hasMultipleSizes ?? false;
+    const categoryIsPizza = selectedCategory?.name === 'Pizza';
+    const categoryIsEmpanada = selectedCategory?.name === 'Empanada';
 
     return (
         <>
@@ -348,15 +350,17 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                         </Select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="priceFull">
-                                {categoryHasMultipleSizes ? 'Precio Principal (Entera/Doc.)' : 'Precio'}
+                                {categoryIsPizza ? 'Precio Entera' : categoryIsEmpanada ? 'Precio Docena' : 'Precio'}
                             </Label>
                             <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={item?.priceFull} required disabled={!selectedCategoryName} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="priceHalf">Precio Secundario (Media/6 Un.)</Label>
+                            <Label htmlFor="priceHalf">
+                                {categoryIsPizza ? 'Precio Media' : categoryIsEmpanada ? 'Precio 1/2 Doc.' : ''}
+                            </Label>
                             <Input 
                                 id="priceHalf" 
                                 name="priceHalf" 
@@ -365,6 +369,18 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                                 defaultValue={item?.priceHalf} 
                                 disabled={!selectedCategoryName || !categoryHasMultipleSizes}
                                 placeholder={!categoryHasMultipleSizes ? 'No aplica' : ''}
+                            />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="priceUnit">Precio Unidad</Label>
+                            <Input 
+                                id="priceUnit" 
+                                name="priceUnit" 
+                                type="number" 
+                                step="0.01" 
+                                defaultValue={item?.priceUnit} 
+                                disabled={!categoryIsEmpanada}
+                                placeholder={!categoryIsEmpanada ? 'No aplica' : ''}
                             />
                         </div>
                     </div>

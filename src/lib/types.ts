@@ -11,6 +11,7 @@ export type MenuItem = {
   category: string;
   priceFull: number; // Corresponds to 'entera' for pizza, '12' for empanadas, or unit price
   priceHalf?: number; // Corresponds to 'media' for pizza, '6' for empanadas
+  priceUnit?: number; // Corresponds to 'unidad' for empanadas
   measurementUnit?: string; // For single-size items, e.g., 'unidad', '500ml'
   available: boolean;
 };
