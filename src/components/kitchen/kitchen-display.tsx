@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Clock, User, ChefHat, ShoppingBag, ArrowRight, Check, Trash2, RefreshCw, Bike } from 'lucide-react';
-import { getKitchenOrders } from '@/lib/api';
 
 interface KitchenDisplayProps {
   initialOrders: Order[];
@@ -106,8 +105,11 @@ const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: Or
 export function KitchenDisplay({ initialOrders, deliveryPeople }: KitchenDisplayProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [isPending, startTransition] = useTransition();
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
 
   const handleStatusChange = (orderId: string, status: OrderStatus) => {
     startTransition(async () => {
@@ -117,18 +119,17 @@ export function KitchenDisplay({ initialOrders, deliveryPeople }: KitchenDisplay
     });
   };
   
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    const refreshedOrders = await getKitchenOrders();
-    setOrders(refreshedOrders);
-    setIsRefreshing(false);
+  const handleRefresh = () => {
+    startTransition(() => {
+      router.refresh();
+    });
   }
 
   return (
     <div>
         <div className="text-right mb-4">
-            <Button onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+            <Button onClick={handleRefresh} disabled={isPending}>
+                <RefreshCw className={cn("mr-2 h-4 w-4", isPending && "animate-spin")} />
                 Actualizar
             </Button>
         </div>
