@@ -9,12 +9,12 @@ import { Button } from "../ui/button";
 import { LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const initialState = {
+const initialState: { error: string | null } = {
   error: null,
 };
 
 export function LoginForm() {
-  const [state, formAction] = useActionState(loginDriver, initialState as any);
+  const [state, formAction] = useActionState(loginDriver, initialState);
   const { toast } = useToast();
 
   useEffect(() => {

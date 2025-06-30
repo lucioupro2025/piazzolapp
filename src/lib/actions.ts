@@ -50,7 +50,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   }
 }
 
-export async function loginDriver(formData: FormData) {
+export async function loginDriver(prevState: { error: string | null }, formData: FormData) {
     const name = formData.get('name') as string;
     const password = formData.get('password') as string;
 
