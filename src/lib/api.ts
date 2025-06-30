@@ -54,13 +54,17 @@ export async function getSalesData(): Promise<Sale[]> {
 
     deliveredOrders.forEach(order => {
         order.items.forEach((item, index) => {
-            salesData.push({
-                id: `${order.id}-${index}`,
-                date: order.createdAt,
-                productName: `${item.name} (${item.size.charAt(0).toUpperCase() + item.size.slice(1)})`,
-                quantity: item.quantity,
-                totalPrice: item.unitPrice * item.quantity,
-            });
+            const menuItem = menuItems.find(mi => mi.id === item.menuItemId);
+            if (menuItem) {
+                salesData.push({
+                    id: `${order.id}-${index}`,
+                    date: order.createdAt,
+                    productName: `${item.name} (${item.size.charAt(0).toUpperCase() + item.size.slice(1)})`,
+                    category: menuItem.category,
+                    quantity: item.quantity,
+                    totalPrice: item.unitPrice * item.quantity,
+                });
+            }
         });
     });
 

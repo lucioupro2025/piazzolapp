@@ -52,6 +52,7 @@ export type Sale = {
   id: string;
   date: string;
   productName: string;
+  category: string;
   quantity: number;
   totalPrice: number;
 };

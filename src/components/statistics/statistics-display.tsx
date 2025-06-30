@@ -8,8 +8,8 @@ import { es } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ interface StatisticsDisplayProps {
   cancelledOrders: Order[];
 }
 
-const chartConfig = {
+const barChartConfig = {
   sales: {
     label: "Ventas",
     color: "hsl(var(--primary))",
@@ -80,6 +80,32 @@ export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales, cancelled
       .map(([date, sales]) => ({ date, sales }))
       .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [sales]);
+  
+  const { salesByCategory, pieChartConfig } = useMemo(() => {
+    const categoryData: { [key: string]: number } = {};
+    sales.forEach(sale => {
+        categoryData[sale.category] = (categoryData[sale.category] || 0) + sale.totalPrice;
+    });
+
+    const pieData = Object.entries(categoryData)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a,b) => b.value - a.value);
+
+    const config = pieData.reduce((acc, entry) => {
+        acc[entry.name] = { label: entry.name };
+        return acc;
+    }, {} as ChartConfig);
+
+    return { salesByCategory: pieData, pieChartConfig: config };
+  }, [sales]);
+
+  const PIE_COLORS = [
+    "hsl(var(--primary))",
+    "hsl(var(--accent))",
+    "hsl(var(--secondary))",
+    "hsl(24, 80%, 70%)",
+    "hsl(160, 70%, 50%)",
+  ];
 
   return (
     <div className="space-y-8">
@@ -113,38 +139,81 @@ export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales, cancelled
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ventas por Día</CardTitle>
-          <CardDescription>Ingresos de los últimos días con pedidos entregados.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-                 <BarChart data={salesByDay} accessibilityLayer margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                        tickFormatter={(value) => format(new Date(value), "d MMM", { locale: es })}
-                    />
-                    <YAxis
-                        tickFormatter={(value) => `$${Number(value) / 1000}k`}
-                    />
-                    <Tooltip 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card>
+            <CardHeader>
+            <CardTitle>Ventas por Día</CardTitle>
+            <CardDescription>Ingresos de los últimos días con pedidos entregados.</CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+                <ChartContainer config={barChartConfig} className="min-h-[300px] w-full">
+                    <BarChart data={salesByDay} accessibilityLayer margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            tickFormatter={(value) => format(new Date(value), "d MMM", { locale: es })}
+                        />
+                        <YAxis
+                            domain={[0, 900000]}
+                            tickFormatter={(value) => `$${Number(value) / 1000}k`}
+                        />
+                        <Tooltip 
+                            cursor={false}
+                            content={<ChartTooltipContent 
+                                formatter={(value) => `$${(value as number).toLocaleString('es-AR')}`}
+                                labelFormatter={(label) => format(new Date(label), "eeee, d 'de' MMMM", { locale: es })}
+                            />} 
+                        />
+                        <Legend />
+                        <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
+                    </BarChart>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Ventas por Categoría</CardTitle>
+                <CardDescription>Distribución de ingresos por categoría de producto.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+                {salesByCategory.length > 0 ? (
+                <ChartContainer config={pieChartConfig} className="mx-auto aspect-square min-h-[300px]">
+                    <PieChart>
+                    <Tooltip
                         cursor={false}
-                        content={<ChartTooltipContent 
-                            formatter={(value) => `$${(value as number).toLocaleString('es-AR')}`}
-                            labelFormatter={(label) => format(new Date(label), "eeee, d 'de' MMMM", { locale: es })}
-                        />} 
+                        content={<ChartTooltipContent
+                        hideLabel
+                        formatter={(value) => `$${(value as number).toLocaleString('es-AR')}`}
+                        />}
                     />
-                    <Legend />
-                    <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
-                 </BarChart>
-            </ChartContainer>
-        </CardContent>
-      </Card>
+                    <Pie
+                        data={salesByCategory}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        innerRadius={60}
+                        paddingAngle={2}
+                    >
+                        {salesByCategory.map((entry, index) => (
+                        <Cell key={`cell-${entry.name}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                    </Pie>
+                    <Legend content={<ChartLegendContent />} />
+                    </PieChart>
+                </ChartContainer>
+                ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No hay datos para mostrar el gráfico.
+                </div>
+                )}
+            </CardContent>
+        </Card>
+      </div>
       
       <Card>
         <CardHeader>
@@ -158,6 +227,7 @@ export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales, cancelled
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Producto</TableHead>
+                  <TableHead>Categoría</TableHead>
                   <TableHead className="text-center">Cantidad</TableHead>
                   <TableHead className="text-right">Precio Total</TableHead>
                 </TableRow>
@@ -167,12 +237,13 @@ export const StatisticsDisplay: FC<StatisticsDisplayProps> = ({ sales, cancelled
                   <TableRow key={sale.id}>
                     <TableCell>{format(new Date(sale.date), 'dd/MM/yyyy HH:mm', { locale: es })}</TableCell>
                     <TableCell className="font-medium">{sale.productName}</TableCell>
+                    <TableCell>{sale.category}</TableCell>
                     <TableCell className="text-center">{sale.quantity}</TableCell>
                     <TableCell className="text-right">${sale.totalPrice.toLocaleString('es-AR')}</TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                         Aún no hay ventas registradas. Las ventas de pedidos "Entregado" aparecerán aquí.
                     </TableCell>
                   </TableRow>
