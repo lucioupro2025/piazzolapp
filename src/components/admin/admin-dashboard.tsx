@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, type FC, useEffect } from 'react';
+import { useState, useTransition, useMemo, type FC } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MenuItem, DeliveryPerson, Category } from '@/lib/types';
 import { 
@@ -315,14 +315,8 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
         return categories.find(c => c.name === selectedCategoryName);
     }, [selectedCategoryName, categories]);
 
-    useEffect(() => {
-        if (item?.category) {
-            setSelectedCategoryName(item.category);
-        }
-    }, [item]);
-
     const isCategorySelected = !!selectedCategory;
-    const categoryHasMultipleSizes = isCategorySelected && selectedCategory.hasMultipleSizes;
+    const categoryHasMultipleSizes = isCategorySelected ? selectedCategory.hasMultipleSizes : false;
 
     return (
         <>
@@ -342,7 +336,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="category">Categoría</Label>
-                        <Select name="category" defaultValue={item?.category} onValueChange={setSelectedCategoryName} required>
+                        <Select name="category" value={selectedCategoryName} onValueChange={setSelectedCategoryName} required>
                             <SelectTrigger id="category"><SelectValue placeholder="Seleccionar categoría..." /></SelectTrigger>
                             <SelectContent>
                                 {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
@@ -366,7 +360,7 @@ function ProductForm({ item, categories, isPending, onSubmit, onClose }: Product
                                 step="0.01" 
                                 defaultValue={item?.priceHalf} 
                                 disabled={!isCategorySelected || !categoryHasMultipleSizes}
-                                placeholder={!categoryHasMultipleSizes ? 'No aplica' : ''}
+                                placeholder={!isCategorySelected || !categoryHasMultipleSizes ? 'No aplica' : ''}
                             />
                         </div>
                     </div>
