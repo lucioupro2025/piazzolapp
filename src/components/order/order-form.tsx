@@ -52,6 +52,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<string>('');
 
   const { register, handleSubmit, control, watch, formState: { errors }, reset } = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
@@ -75,11 +76,14 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
     return cart.reduce((total, item) => total + item.unitPrice * item.quantity, 0);
   }, [cart]);
 
-  const estimatedTime = useMemo(() => {
-    if (typeof delay !== 'number') return 'N/A';
+  useEffect(() => {
+    if (typeof delay !== 'number') {
+        setEstimatedTime('N/A');
+        return;
+    };
     const date = new Date();
     date.setMinutes(date.getMinutes() + delay);
-    return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    setEstimatedTime(date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
   }, [delay]);
   
   const handleAddItem = (item: MenuItem) => {
@@ -331,7 +335,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
 
                 <div className="flex justify-between items-center bg-accent/30 p-3 rounded-lg">
                   <p className="font-bold">Hora de entrega estimada:</p>
-                  <p className="text-xl font-bold font-body text-primary">{estimatedTime}</p>
+                  <p className="text-xl font-bold font-body text-primary">{estimatedTime || 'Calculando...'}</p>
                 </div>
               </div>
             </CardContent>
