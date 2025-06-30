@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FC } from 'react';
+import { useState, useTransition, type FC, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,6 +31,19 @@ const statusConfig: Record<OrderStatus, { text: string; color: string; next?: Or
 const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: OrderStatus) => void, deliveryPersonName?: string }> = ({ order, onStatusChange, deliveryPersonName }) => {
   const config = statusConfig[order.status];
   const nextStatus = config.next;
+  const [formattedTime, setFormattedTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs only on the client, after the component has mounted,
+    // preventing a hydration mismatch between server and client-rendered HTML.
+    const date = new Date(order.estimatedTime);
+    if (!isNaN(date.getTime())) {
+      setFormattedTime(date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+    } else {
+      // If `order.estimatedTime` is not a valid date (e.g., already formatted), display it directly.
+      setFormattedTime(order.estimatedTime);
+    }
+  }, [order.estimatedTime]);
   
   return (
     <motion.div
@@ -47,7 +60,7 @@ const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: Or
                     <Badge variant="secondary" className="text-lg">{config.text}</Badge>
                 </CardTitle>
                 <div className="text-sm flex justify-between">
-                    <span><Clock className="inline h-4 w-4 mr-1" />{new Date(order.estimatedTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span><Clock className="inline h-4 w-4 mr-1" />{formattedTime ?? '...'}</span>
                     <span><User className="inline h-4 w-4 mr-1" />{order.customerName}</span>
                 </div>
             </CardHeader>
