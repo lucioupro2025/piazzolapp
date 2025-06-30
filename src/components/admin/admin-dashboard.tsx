@@ -2,8 +2,12 @@
 
 import { useState, useTransition, type FC } from 'react';
 import { useRouter } from 'next/navigation';
-import type { MenuItem, DeliveryPerson } from '@/lib/types';
-import { upsertMenuItem, deleteMenuItem, upsertDeliveryPerson, deleteDeliveryPerson } from '@/lib/actions';
+import type { MenuItem, DeliveryPerson, Category } from '@/lib/types';
+import { 
+  upsertMenuItem, deleteMenuItem, 
+  upsertDeliveryPerson, deleteDeliveryPerson, 
+  upsertCategory, deleteCategory
+} from '@/lib/actions';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,47 +20,65 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Check, X } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 
 interface AdminDashboardProps {
   menuItems: MenuItem[];
   deliveryPeople: DeliveryPerson[];
+  categories: Category[];
 }
 
-export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProps) {
+type DialogType = 'product' | 'person' | 'category' | null;
+
+export function AdminDashboard({ menuItems, deliveryPeople, categories }: AdminDashboardProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('products');
 
   const [dialogState, setDialogState] = useState<{
-    type: 'product' | 'person' | null;
-    data: MenuItem | DeliveryPerson | null;
+    type: DialogType;
+    data: MenuItem | DeliveryPerson | Category | null;
   }>({ type: null, data: null });
 
   const [deleteState, setDeleteState] = useState<{
-    type: 'product' | 'person' | null;
+    type: DialogType;
     id: string | null;
   }>({ type: null, id: null });
 
 
   const handleFormSubmit = (action: (formData: FormData) => Promise<void>, formData: FormData) => {
     startTransition(async () => {
-      await action(formData);
-      setDialogState({ type: null, data: null });
-      toast({
-        title: "Éxito",
-        description: "Los datos se han guardado correctamente.",
-      });
-      router.refresh();
+      try {
+        await action(formData);
+        setDialogState({ type: null, data: null });
+        toast({
+          title: "Éxito",
+          description: "Los datos se han guardado correctamente.",
+        });
+        router.refresh();
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo guardar la información."
+        })
+      }
     });
   };
 
   const handleDelete = () => {
     if (!deleteState.type || !deleteState.id) return;
 
-    const action = deleteState.type === 'product' ? deleteMenuItem(deleteState.id) : deleteDeliveryPerson(deleteState.id);
+    let action;
+    switch (deleteState.type) {
+        case 'product': action = deleteMenuItem(deleteState.id); break;
+        case 'person': action = deleteDeliveryPerson(deleteState.id); break;
+        case 'category': action = deleteCategory(deleteState.id); break;
+        default: return;
+    }
     
     startTransition(async () => {
         await action;
@@ -69,17 +91,29 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
     });
   };
   
+  const getButtonForTab = (tab: string) => {
+    switch (tab) {
+        case 'products':
+            return <Button onClick={() => setDialogState({ type: 'product', data: null })}><PlusCircle className="mr-2" /> Añadir Producto</Button>;
+        case 'deliveryPeople':
+            return <Button onClick={() => setDialogState({ type: 'person', data: null })}><PlusCircle className="mr-2" /> Añadir Repartidor</Button>;
+        case 'categories':
+            return <Button onClick={() => setDialogState({ type: 'category', data: null })}><PlusCircle className="mr-2" /> Añadir Categoría</Button>;
+        default:
+            return null;
+    }
+  }
+
   return (
     <>
-      <Tabs defaultValue="products">
+      <Tabs defaultValue="products" onValueChange={setActiveTab}>
         <div className="flex justify-between items-center mb-4">
             <TabsList>
-            <TabsTrigger value="products">Productos</TabsTrigger>
-            <TabsTrigger value="deliveryPeople">Repartidores</TabsTrigger>
+                <TabsTrigger value="products">Productos</TabsTrigger>
+                <TabsTrigger value="categories">Categorías</TabsTrigger>
+                <TabsTrigger value="deliveryPeople">Repartidores</TabsTrigger>
             </TabsList>
-            <Button onClick={() => setDialogState({ type: 'product', data: null })}>
-                <PlusCircle className="mr-2" /> Añadir Producto
-            </Button>
+            {getButtonForTab(activeTab)}
         </div>
         <TabsContent value="products">
           <Card>
@@ -88,7 +122,8 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Precio (Entera/Media)</TableHead>
+                  <TableHead>Precio Principal</TableHead>
+                  <TableHead>Precio Secundario</TableHead>
                   <TableHead>Disponibilidad</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -98,7 +133,8 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.category}</TableCell>
-                    <TableCell>${item.priceFull} / ${item.priceHalf}</TableCell>
+                    <TableCell>${item.priceFull}</TableCell>
+                    <TableCell>{item.priceHalf ? `$${item.priceHalf}` : '-'}</TableCell>
                     <TableCell>
                         <Badge variant={item.available ? "default" : "destructive"} className={cn(item.available ? 'bg-green-500' : 'bg-red-500', 'text-white')}>
                             {item.available ? 'Sí' : 'No'}
@@ -118,12 +154,36 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
             </Table>
           </Card>
         </TabsContent>
+        <TabsContent value="categories">
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Tiene Múltiples Tamaños</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((cat) => (
+                  <TableRow key={cat.id}>
+                    <TableCell className="font-medium">{cat.name}</TableCell>
+                    <TableCell>{cat.hasMultipleSizes ? <Check className="text-green-500"/> : <X className="text-red-500"/>}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => setDialogState({ type: 'category', data: cat })}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteState({ type: 'category', id: cat.id })}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
         <TabsContent value="deliveryPeople">
-        <div className="flex justify-end mb-4">
-            <Button onClick={() => setDialogState({ type: 'person', data: null })}>
-                <PlusCircle className="mr-2" /> Añadir Repartidor
-            </Button>
-        </div>
           <Card>
             <Table>
               <TableHeader>
@@ -174,19 +234,18 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
                         <Select name="category" defaultValue={(dialogState.data as MenuItem)?.category} required>
                             <SelectTrigger id="category"><SelectValue placeholder="Seleccionar categoría..." /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Pizza">Pizza</SelectItem>
-                                <SelectItem value="Empanada">Empanada</SelectItem>
+                                {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="priceFull">Precio Entera/Docena</Label>
+                            <Label htmlFor="priceFull">Precio Principal</Label>
                             <Input id="priceFull" name="priceFull" type="number" step="0.01" defaultValue={(dialogState.data as MenuItem)?.priceFull} required />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="priceHalf">Precio Media/Media Docena</Label>
-                            <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={(dialogState.data as MenuItem)?.priceHalf} required />
+                            <Label htmlFor="priceHalf">Precio Secundario (opcional)</Label>
+                            <Input id="priceHalf" name="priceHalf" type="number" step="0.01" defaultValue={(dialogState.data as MenuItem)?.priceHalf} />
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -217,7 +276,33 @@ export function AdminDashboard({ menuItems, deliveryPeople }: AdminDashboardProp
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="password">Contraseña</Label>
-                        <Input id="password" name="password" type="password" defaultValue={(dialogState.data as DeliveryPerson)?.password} required />
+                        <Input id="password" name="password" type="password" placeholder={dialogState.data ? 'Dejar en blanco para no cambiar' : ''} required={!dialogState.data} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
+                    <Button type="submit" disabled={isPending}>{isPending ? "Guardando..." : "Guardar"}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Dialog */}
+      <Dialog open={dialogState.type === 'category'} onOpenChange={(open) => !open && setDialogState({ type: null, data: null})}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{dialogState.data ? 'Editar' : 'Añadir'} Categoría</DialogTitle>
+            </DialogHeader>
+            <form action={(formData) => handleFormSubmit(upsertCategory, formData)}>
+                 {dialogState.data && <input type="hidden" name="id" value={(dialogState.data as Category).id} />}
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Nombre</Label>
+                        <Input id="name" name="name" defaultValue={(dialogState.data as Category)?.name} required />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Switch id="hasMultipleSizes" name="hasMultipleSizes" defaultChecked={(dialogState.data as Category)?.hasMultipleSizes ?? false} />
+                        <Label htmlFor="hasMultipleSizes">Tiene múltiples tamaños (ej: Pizza Entera/Media)</Label>
                     </div>
                 </div>
                 <DialogFooter>

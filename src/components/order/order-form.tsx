@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import type { MenuItem, DeliveryPerson, CartItem } from '@/lib/types';
+import type { MenuItem, DeliveryPerson, CartItem, Category } from '@/lib/types';
 import { createOrder } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from '@/components/ui/separator';
 
-import { Search, ShoppingCart, Trash2, Clock, User, Phone, MapPin, Send, PlusCircle, MinusCircle, X } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Clock, User, Phone, MapPin, Send, PlusCircle, MinusCircle } from 'lucide-react';
 
 const orderSchema = z.object({
   customerName: z.string().min(1, 'El nombre es requerido'),
@@ -43,9 +43,21 @@ type OrderFormData = z.infer<typeof orderSchema>;
 interface OrderFormProps {
   menu: MenuItem[];
   deliveryPeople: DeliveryPerson[];
+  categories: Category[];
 }
 
-export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
+const formatSize = (size: CartItem['size']) => {
+    switch(size) {
+        case 'entera': return 'Entera';
+        case 'media': return 'Media';
+        case '12': return 'Docena';
+        case '6': return 'Media Docena';
+        case 'unidad': return 'Unidad';
+        default: return size;
+    }
+}
+
+export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople, categories }) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -77,20 +89,38 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
   }, [cart]);
 
   useEffect(() => {
-    if (typeof delay !== 'number') {
+    const numericDelay = parseInt(String(delay), 10);
+    if (isNaN(numericDelay)) {
         setEstimatedTime('N/A');
         return;
-    };
+    }
     const date = new Date();
-    date.setMinutes(date.getMinutes() + delay);
+    date.setMinutes(date.getMinutes() + numericDelay);
     setEstimatedTime(date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
   }, [delay]);
   
   const handleAddItem = (item: MenuItem) => {
-    const existingItem = cart.find(cartItem => cartItem.menuItemId === item.id);
-    if(item.category === 'Pizza' || item.category === 'Empanada') {
+    const category = categories.find(c => c.name === item.category);
+    
+    if (category?.hasMultipleSizes) {
       setSelectedItem(item);
       setIsSizeModalOpen(true);
+      setSearchTerm('');
+    } else {
+      const newItem: CartItem = {
+        id: `${item.id}-unidad-${Date.now()}`,
+        menuItemId: item.id,
+        name: item.name,
+        size: 'unidad',
+        quantity: 1,
+        unitPrice: item.priceFull,
+      };
+      const existingItem = cart.find(cartItem => cartItem.menuItemId === item.id && cartItem.size === 'unidad');
+      if (existingItem) {
+        updateQuantity(existingItem.id, existingItem.quantity + 1);
+      } else {
+        setCart(prevCart => [...prevCart, newItem]);
+      }
       setSearchTerm('');
     }
   };
@@ -98,7 +128,12 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
   const handleSelectSize = (size: 'entera' | 'media' | '12' | '6') => {
     if (!selectedItem) return;
 
-    const unitPrice = (size === 'entera' || size === '12') ? selectedItem.priceFull : selectedItem.priceHalf;
+    let unitPrice;
+    if (size === 'entera' || size === '12') {
+        unitPrice = selectedItem.priceFull;
+    } else {
+        unitPrice = selectedItem.priceHalf || 0;
+    }
 
     const newItem: CartItem = {
       id: `${selectedItem.id}-${size}-${Date.now()}`,
@@ -169,7 +204,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
             <CardContent>
               <div className="relative">
                 <Input
-                  placeholder="Escriba el nombre de la pizza o empanada..."
+                  placeholder="Escriba el nombre del producto..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="text-lg"
@@ -305,7 +340,7 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
                         >
                           <div>
                             <p className="font-bold">{item.name}</p>
-                            <p className="text-sm text-muted-foreground capitalize">{item.size.replace('entera', 'Entera').replace('media', 'Media')} - ${item.unitPrice.toLocaleString('es-AR')}</p>
+                            <p className="text-sm text-muted-foreground capitalize">{formatSize(item.size)} - ${item.unitPrice.toLocaleString('es-AR')}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, item.quantity - 1)}><MinusCircle className="h-4 w-4" /></Button>
                               <span className="w-4 text-center">{item.quantity}</span>
@@ -359,13 +394,13 @@ export const OrderForm: FC<OrderFormProps> = ({ menu, deliveryPeople }) => {
             {selectedItem?.category === 'Pizza' && (
               <>
                 <Button size="lg" onClick={() => handleSelectSize('entera')}>Entera - ${selectedItem.priceFull.toLocaleString('es-AR')}</Button>
-                <Button size="lg" variant="outline" onClick={() => handleSelectSize('media')}>Media - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>
+                {selectedItem.priceHalf && selectedItem.priceHalf > 0 && <Button size="lg" variant="outline" onClick={() => handleSelectSize('media')}>Media - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>}
               </>
             )}
             {selectedItem?.category === 'Empanada' && (
               <>
-                <Button size="lg" onClick={() => handleSelectSize('12')}>12 Unidades - ${selectedItem.priceFull.toLocaleString('es-AR')}</Button>
-                <Button size="lg" variant="outline" onClick={() => handleSelectSize('6')}>6 Unidades - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>
+                <Button size="lg" onClick={() => handleSelectSize('12')}>Docena - ${selectedItem.priceFull.toLocaleString('es-AR')}</Button>
+                {selectedItem.priceHalf && selectedItem.priceHalf > 0 && <Button size="lg" variant="outline" onClick={() => handleSelectSize('6')}>Media Docena - ${selectedItem.priceHalf.toLocaleString('es-AR')}</Button>}
               </>
             )}
           </div>

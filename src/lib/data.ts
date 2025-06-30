@@ -1,4 +1,9 @@
-import type { MenuItem, Order, DeliveryPerson } from './types';
+import type { MenuItem, Order, DeliveryPerson, Category } from './types';
+
+export const categories: Category[] = [
+  { id: 'c1', name: 'Pizza', hasMultipleSizes: true },
+  { id: 'c2', name: 'Empanada', hasMultipleSizes: true },
+];
 
 export const menuItems: MenuItem[] = [
   { id: '1', name: 'Muzzarella', ingredients: 'Salsa de tomate, muzzarella, aceitunas', category: 'Pizza', priceFull: 5800, priceHalf: 3200, available: true },

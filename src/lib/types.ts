@@ -1,10 +1,16 @@
+export type Category = {
+  id: string;
+  name: string;
+  hasMultipleSizes: boolean;
+};
+
 export type MenuItem = {
   id: string;
   name: string;
   ingredients: string;
-  category: 'Pizza' | 'Empanada';
-  priceFull: number; // Corresponds to 'entera' for pizza, '12' for empanadas
-  priceHalf: number; // Corresponds to 'media' for pizza, '6' for empanadas
+  category: string;
+  priceFull: number; // Corresponds to 'entera' for pizza, '12' for empanadas, or unit price
+  priceHalf?: number; // Corresponds to 'media' for pizza, '6' for empanadas
   available: boolean;
 };
 
@@ -12,7 +18,7 @@ export type CartItem = {
   id: string;
   menuItemId: string;
   name: string;
-  size: 'entera' | 'media' | '12' | '6';
+  size: 'entera' | 'media' | '12' | '6' | 'unidad';
   quantity: number;
   unitPrice: number;
 };

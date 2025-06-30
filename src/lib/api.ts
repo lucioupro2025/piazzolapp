@@ -1,4 +1,4 @@
-import { menuItems, orders, deliveryPeople } from './data';
+import { menuItems, orders, deliveryPeople, categories } from './data';
 import type { OrderStatus } from './types';
 
 // Simulate API delay
@@ -7,6 +7,11 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function getMenuItems() {
   await delay(50);
   return menuItems;
+}
+
+export async function getCategories() {
+  await delay(50);
+  return categories;
 }
 
 export async function getDeliveryPeople() {

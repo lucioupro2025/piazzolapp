@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import type { CartItem, OrderStatus } from './types';
-import { orders, deliveryPeople, menuItems } from './data';
+import { orders, deliveryPeople, menuItems, categories } from './data';
 
 interface OrderData {
   customerName: string;
@@ -54,6 +54,10 @@ export async function loginDriver(prevState: { error: string | null }, formData:
     const name = formData.get('name') as string;
     const password = formData.get('password') as string;
 
+    if (!name || !password) {
+        return { error: 'Nombre y contraseña son requeridos.' };
+    }
+
     const driver = deliveryPeople.find(d => d.name.toLowerCase() === name.toLowerCase() && d.password === password);
 
     if (driver) {
@@ -80,9 +84,9 @@ export async function upsertMenuItem(formData: FormData) {
   const data = {
     name: formData.get('name') as string,
     ingredients: formData.get('ingredients') as string,
-    category: formData.get('category') as 'Pizza' | 'Empanada',
+    category: formData.get('category') as string,
     priceFull: parseFloat(formData.get('priceFull') as string),
-    priceHalf: parseFloat(formData.get('priceHalf') as string),
+    priceHalf: parseFloat(formData.get('priceHalf') as string) || 0,
     available: formData.get('available') === 'on',
   };
 
@@ -113,24 +117,26 @@ export async function deleteMenuItem(id: string) {
 // Delivery Person Actions
 export async function upsertDeliveryPerson(formData: FormData) {
     const id = formData.get('id') as string;
-    const data = {
-        name: formData.get('name') as string,
-        password: formData.get('password') as string,
-    };
+    const name = formData.get('name') as string;
+    const password = formData.get('password') as string;
 
     if (id) {
         const index = deliveryPeople.findIndex(p => p.id === id);
         if (index > -1) {
-            deliveryPeople[index] = { ...deliveryPeople[index], ...data };
+            deliveryPeople[index].name = name;
+            // Only update password if a new one is provided
+            if (password) {
+                deliveryPeople[index].password = password;
+            }
         }
     } else {
         deliveryPeople.push({
             id: `d-${Date.now()}`,
-            ...data
+            name,
+            password
         });
     }
     revalidatePath('/admin');
-    revalidatePath('/repartidores');
 }
 
 export async function deleteDeliveryPerson(id: string) {
@@ -139,5 +145,34 @@ export async function deleteDeliveryPerson(id: string) {
         deliveryPeople.splice(index, 1);
     }
     revalidatePath('/admin');
-    revalidatePath('/repartidores');
+}
+
+// Category Actions
+export async function upsertCategory(formData: FormData) {
+    const id = formData.get('id') as string;
+    const data = {
+        name: formData.get('name') as string,
+        hasMultipleSizes: formData.get('hasMultipleSizes') === 'on',
+    };
+
+    if (id) {
+        const index = categories.findIndex(c => c.id === id);
+        if (index > -1) {
+            categories[index] = { ...categories[index], ...data };
+        }
+    } else {
+        categories.push({
+            id: `c-${Date.now()}`,
+            ...data
+        });
+    }
+    revalidatePath('/admin');
+}
+
+export async function deleteCategory(id: string) {
+    const index = categories.findIndex(c => c.id === id);
+    if (index > -1) {
+        categories.splice(index, 1);
+    }
+    revalidatePath('/admin');
 }
