@@ -1,5 +1,5 @@
 import { KitchenDisplay } from '@/components/kitchen/kitchen-display';
-import { getKitchenOrders } from '@/lib/api';
+import { getKitchenOrders, getDeliveryPeople } from '@/lib/api';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -20,7 +20,8 @@ export default function KitchenPage() {
 
 async function KitchenDisplayWrapper() {
     const initialOrders = await getKitchenOrders();
-    return <KitchenDisplay initialOrders={initialOrders} />
+    const deliveryPeople = await getDeliveryPeople();
+    return <KitchenDisplay initialOrders={initialOrders} deliveryPeople={deliveryPeople} />
 }
 
 function KitchenLoadingSkeleton() {

@@ -4,7 +4,7 @@ import { useState, useTransition, type FC } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import type { Order, OrderStatus } from '@/lib/types';
+import type { Order, OrderStatus, DeliveryPerson } from '@/lib/types';
 import { updateOrderStatus } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 
@@ -12,11 +12,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Clock, User, ChefHat, ShoppingBag, ArrowRight, Check, Trash2, RefreshCw } from 'lucide-react';
+import { Clock, User, ChefHat, ShoppingBag, ArrowRight, Check, Trash2, RefreshCw, Bike } from 'lucide-react';
 import { getKitchenOrders } from '@/lib/api';
 
 interface KitchenDisplayProps {
   initialOrders: Order[];
+  deliveryPeople: DeliveryPerson[];
 }
 
 const statusConfig: Record<OrderStatus, { text: string; color: string; next?: OrderStatus; nextText?: string }> = {
@@ -27,7 +28,7 @@ const statusConfig: Record<OrderStatus, { text: string; color: string; next?: Or
   cancelado: { text: "Cancelado", color: "bg-red-500 text-white" },
 };
 
-const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: OrderStatus) => void }> = ({ order, onStatusChange }) => {
+const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: OrderStatus) => void, deliveryPersonName?: string }> = ({ order, onStatusChange, deliveryPersonName }) => {
   const config = statusConfig[order.status];
   const nextStatus = config.next;
   
@@ -60,10 +61,18 @@ const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: Or
                     ))}
                 </ul>
                 <Separator className="my-3" />
-                <Badge variant={order.deliveryType === 'envio' ? "default" : "secondary"} className="capitalize">
-                    {order.deliveryType === 'envio' ? <ChefHat className="h-4 w-4 mr-2"/> : <ShoppingBag className="h-4 w-4 mr-2"/>}
-                    {order.deliveryType}
-                </Badge>
+                <div className='flex justify-between items-center'>
+                    <Badge variant={order.deliveryType === 'envio' ? "default" : "secondary"} className="capitalize">
+                        {order.deliveryType === 'envio' ? <ChefHat className="h-4 w-4 mr-2"/> : <ShoppingBag className="h-4 w-4 mr-2"/>}
+                        {order.deliveryType}
+                    </Badge>
+                     {order.deliveryType === 'envio' && deliveryPersonName && (
+                        <div className="text-sm flex items-center gap-1 text-muted-foreground font-medium">
+                            <Bike className="h-4 w-4" />
+                            <span>{deliveryPersonName}</span>
+                        </div>
+                    )}
+                </div>
             </CardContent>
             <CardFooter className="p-4 flex justify-between items-center">
                 <Button variant="ghost" size="icon" className="text-red-600 hover:bg-red-100" onClick={() => onStatusChange(order.id, 'cancelado')}>
@@ -81,7 +90,7 @@ const OrderCard: FC<{ order: Order, onStatusChange: (orderId: string, status: Or
   );
 };
 
-export function KitchenDisplay({ initialOrders }: KitchenDisplayProps) {
+export function KitchenDisplay({ initialOrders, deliveryPeople }: KitchenDisplayProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [isPending, startTransition] = useTransition();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -112,9 +121,12 @@ export function KitchenDisplay({ initialOrders }: KitchenDisplayProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence>
-                {orders.map(order => (
-                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} />
-                ))}
+                {orders.map(order => {
+                    const deliveryPerson = deliveryPeople.find(d => d.id === order.deliveryPersonId);
+                    return (
+                     <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} deliveryPersonName={deliveryPerson?.name} />
+                    )
+                })}
             </AnimatePresence>
         </div>
         {orders.length === 0 && (
