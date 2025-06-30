@@ -138,6 +138,9 @@ export async function upsertDeliveryPerson(formData: FormData) {
         });
     }
     revalidatePath('/admin');
+    revalidatePath('/');
+    revalidatePath('/cocina');
+    revalidatePath('/repartidores');
 }
 
 export async function deleteDeliveryPerson(id: string) {
@@ -146,6 +149,9 @@ export async function deleteDeliveryPerson(id: string) {
         deliveryPeople.splice(index, 1);
     }
     revalidatePath('/admin');
+    revalidatePath('/');
+    revalidatePath('/cocina');
+    revalidatePath('/repartidores');
 }
 
 // Category Actions
