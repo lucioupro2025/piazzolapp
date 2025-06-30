@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import type { CartItem, OrderStatus } from './types';
-import { orders, deliveryPeople } from './data';
+import { orders, deliveryPeople, menuItems } from './data';
 
 interface OrderData {
   customerName: string;
@@ -72,4 +72,72 @@ export async function loginDriver(formData: FormData) {
 export async function logoutDriver() {
     cookies().delete('driver_session');
     redirect('/repartidores/login');
+}
+
+// Menu Item Actions
+export async function upsertMenuItem(formData: FormData) {
+  const id = formData.get('id') as string;
+  const data = {
+    name: formData.get('name') as string,
+    ingredients: formData.get('ingredients') as string,
+    category: formData.get('category') as 'Pizza' | 'Empanada',
+    priceFull: parseFloat(formData.get('priceFull') as string),
+    priceHalf: parseFloat(formData.get('priceHalf') as string),
+    available: formData.get('available') === 'on',
+  };
+
+  if (id) {
+    const index = menuItems.findIndex(item => item.id === id);
+    if (index > -1) {
+      menuItems[index] = { ...menuItems[index], ...data };
+    }
+  } else {
+    menuItems.push({
+      id: `m-${Date.now()}`,
+      ...data,
+    });
+  }
+  revalidatePath('/admin');
+  revalidatePath('/');
+}
+
+export async function deleteMenuItem(id: string) {
+    const index = menuItems.findIndex(item => item.id === id);
+    if (index > -1) {
+        menuItems.splice(index, 1);
+    }
+    revalidatePath('/admin');
+    revalidatePath('/');
+}
+
+// Delivery Person Actions
+export async function upsertDeliveryPerson(formData: FormData) {
+    const id = formData.get('id') as string;
+    const data = {
+        name: formData.get('name') as string,
+        password: formData.get('password') as string,
+    };
+
+    if (id) {
+        const index = deliveryPeople.findIndex(p => p.id === id);
+        if (index > -1) {
+            deliveryPeople[index] = { ...deliveryPeople[index], ...data };
+        }
+    } else {
+        deliveryPeople.push({
+            id: `d-${Date.now()}`,
+            ...data
+        });
+    }
+    revalidatePath('/admin');
+    revalidatePath('/repartidores');
+}
+
+export async function deleteDeliveryPerson(id: string) {
+    const index = deliveryPeople.findIndex(p => p.id === id);
+    if (index > -1) {
+        deliveryPeople.splice(index, 1);
+    }
+    revalidatePath('/admin');
+    revalidatePath('/repartidores');
 }

@@ -28,6 +28,9 @@ export function Header() {
           <Button variant="ghost" asChild className="text-base">
             <Link href="/repartidores">Repartidores</Link>
           </Button>
+          <Button variant="ghost" asChild className="text-base">
+            <Link href="/admin">Administración</Link>
+          </Button>
         </nav>
 
         {/* Mobile Navigation */}
@@ -48,6 +51,9 @@ export function Header() {
                 </Button>
                 <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
                   <Link href="/repartidores">Repartidores</Link>
+                </Button>
+                <Button variant="ghost" asChild className="text-lg justify-start" onClick={() => setSheetOpen(false)}>
+                  <Link href="/admin">Administración</Link>
                 </Button>
               </nav>
             </SheetContent>
