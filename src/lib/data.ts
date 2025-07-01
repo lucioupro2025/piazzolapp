@@ -1,118 +1,138 @@
-import type { MenuItem, Order, DeliveryPerson, Category } from './types';
+import {
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit as firestoreLimit,
+  Timestamp,
+} from 'firebase/firestore';
+import { db } from './firebase';
+import type { MenuItem, Order, DeliveryPerson, Category, OrderStatus } from './types';
 
-// Use a global object to store data in development to prevent hot-reloads from resetting it.
-declare global {
-  var data_store: {
-    categories: Category[];
-    menuItems: MenuItem[];
-    deliveryPeople: DeliveryPerson[];
-    orders: Order[];
+// Generic helper to convert a Firestore snapshot to a typed array
+const snapshotToArray = <T>(snapshot: any): (T & { id: string })[] => {
+  if (snapshot.empty) {
+    return [];
   }
-}
-
-const initialData = {
-  categories: [
-    { id: 'c1', name: 'Pizza', hasMultipleSizes: true },
-    { id: 'c2', name: 'Empanada', hasMultipleSizes: true },
-  ],
-  menuItems: [
-    { id: '1', name: 'Muzzarella', ingredients: 'Salsa de tomate, muzzarella, aceitunas', category: 'Pizza', priceFull: 5800, priceHalf: 3200, available: true },
-    { id: '2', name: 'Napolitana', ingredients: 'Salsa de tomate, muzzarella, rodajas de tomate, ajo, perejil', category: 'Pizza', priceFull: 6200, priceHalf: 3500, available: true },
-    { id: '3', name: 'Fugazzeta', ingredients: 'Cebolla, muzzarella, aceitunas', category: 'Pizza', priceFull: 6200, priceHalf: 3500, available: false },
-    { id: '4', name: 'Jamon y Morrones', ingredients: 'Salsa de tomate, muzzarella, jamón, morrones', category: 'Pizza', priceFull: 6800, priceHalf: 3800, available: true },
-    { id: '5', name: 'Calabresa', ingredients: 'Salsa de tomate, muzzarella, longaniza', category: 'Pizza', priceFull: 7000, priceHalf: 4000, available: true },
-    { id: '6', name: 'Empanada de Carne', ingredients: 'Carne picada, cebolla, huevo', category: 'Empanada', priceFull: 7200, priceHalf: 3800, priceUnit: 700, available: true },
-    { id: '7', name: 'Empanada de Jamón y Queso', ingredients: 'Jamón, queso', category: 'Empanada', priceFull: 7000, priceHalf: 3700, priceUnit: 680, available: true },
-    { id: '8', name: 'Empanada de Pollo', ingredients: 'Pollo, cebolla, morrón', category: 'Empanada', priceFull: 7000, priceHalf: 3700, priceUnit: 680, available: false },
-    { id: '9', name: 'Empanada de Humita', ingredients: 'Choclo, salsa blanca, queso', category: 'Empanada', priceFull: 7000, priceHalf: 3700, priceUnit: 680, available: true },
-  ],
-  deliveryPeople: [
-      { id: 'd1', name: 'Juan', password: '123' },
-      { id: 'd2', name: 'Maria', password: '123' },
-      { id: 'd3', name: 'Pedro', password: '123' },
-  ],
-  orders: [
-      {
-          id: `P${Date.now() - 600000}`,
-          items: [
-            { menuItemId: '1', name: 'Muzzarella', quantity: 1, size: 'entera', unitPrice: 5800 }, 
-            { menuItemId: '7', name: 'Empanada de Jamón y Queso', quantity: 1, size: '6', unitPrice: 3100 }
-          ],
-          totalAmount: 8900,
-          customerName: 'Lucia Fernandez',
-          customerPhone: '1198765432',
-          address: 'Calle Falsa 123, Springfield',
-          deliveryType: 'envio',
-          delay: 40,
-          estimatedTime: new Date(Date.now() - 500000).toISOString(),
-          status: 'entregado',
-          deliveryPersonId: 'd1',
-          createdAt: new Date(Date.now() - 600000).toISOString(),
-      },
-      {
-          id: `P${Date.now() - 300000}`,
-          items: [{ menuItemId: '1', name: 'Muzzarella', quantity: 1, size: 'entera', unitPrice: 5800 }],
-          totalAmount: 5800,
-          customerName: 'Carlos Rodriguez',
-          customerPhone: '1122334455',
-          address: 'Av. Corrientes 1234, CABA',
-          deliveryType: 'envio',
-          delay: 40,
-          estimatedTime: new Date(Date.now() + 10 * 60000).toISOString(),
-          status: 'nuevo',
-          deliveryPersonId: 'd1',
-          createdAt: new Date(Date.now() - 300000).toISOString(),
-      },
-      {
-          id: `P${Date.now() - 200000}`,
-          items: [
-              { menuItemId: '2', name: 'Napolitana', quantity: 1, size: 'entera', unitPrice: 6200 },
-              { menuItemId: '7', name: 'Empanada de Jamón y Queso', quantity: 1, size: '6', unitPrice: 3100 },
-          ],
-          totalAmount: 9300,
-          customerName: 'Laura Gomez',
-          customerPhone: '1166778899',
-          address: 'Retira en Local',
-          deliveryType: 'retiro',
-          delay: 30,
-          estimatedTime: new Date(Date.now() + 20 * 60000).toISOString(),
-          status: 'preparacion',
-          createdAt: new Date(Date.now() - 200000).toISOString(),
-      },
-      {
-          id: `P${Date.now() - 100000}`,
-          items: [{ menuItemId: '4', name: 'Jamon y Morrones', quantity: 2, size: 'entera', unitPrice: 6800 }],
-          totalAmount: 13600,
-          customerName: 'Ana Martinez',
-          customerPhone: '1155443322',
-          address: 'Av. Santa Fe 4321, CABA',
-          deliveryType: 'envio',
-          delay: 50,
-          estimatedTime: new Date(Date.now() + 35 * 60000).toISOString(),
-          status: 'listo',
-          deliveryPersonId: 'd2',
-          createdAt: new Date(Date.now() - 100000).toISOString(),
-      },
-       {
-          id: `P${Date.now() - 50000}`,
-          items: [{ menuItemId: '6', name: 'Empanada de Carne', quantity: 1, size: '12', unitPrice: 7200 }],
-          totalAmount: 7200,
-          customerName: 'Cliente Distraído',
-          customerPhone: '1111111111',
-          address: 'Retira en Local',
-          deliveryType: 'retiro',
-          delay: 20,
-          estimatedTime: new Date(Date.now() + 5 * 60000).toISOString(),
-          status: 'cancelado',
-          createdAt: new Date(Date.now() - 50000).toISOString(),
-      }
-  ]
+  return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 };
 
+// --- READ OPERATIONS ---
 
-const store = global.data_store || (global.data_store = initialData);
+export async function fetchCategories(): Promise<Category[]> {
+  const snapshot = await getDocs(query(collection(db, 'categories'), orderBy('name')));
+  return snapshotToArray<Category>(snapshot);
+}
 
-export const categories: Category[] = store.categories;
-export const menuItems: MenuItem[] = store.menuItems;
-export const deliveryPeople: DeliveryPerson[] = store.deliveryPeople;
-export const orders: Order[] = store.orders;
+export async function fetchMenuItems(): Promise<MenuItem[]> {
+  const snapshot = await getDocs(query(collection(db, 'menuItems'), orderBy('name')));
+  return snapshotToArray<MenuItem>(snapshot);
+}
+
+export async function fetchDeliveryPeople(): Promise<DeliveryPerson[]> {
+  const snapshot = await getDocs(query(collection(db, 'deliveryPeople'), orderBy('name')));
+  return snapshotToArray<DeliveryPerson>(snapshot);
+}
+
+interface FetchOrdersParams {
+    statuses?: OrderStatus[];
+    status?: OrderStatus;
+    limit?: number;
+    orderId?: string;
+    deliveryPersonId?: string;
+}
+
+export async function fetchOrders({ statuses, status, limit, orderId, deliveryPersonId }: FetchOrdersParams): Promise<Order[]> {
+    const constraints = [];
+
+    if (statuses && statuses.length > 0) {
+        constraints.push(where('status', 'in', statuses));
+    } else if (status) {
+        constraints.push(where('status', '==', status));
+    }
+    
+    if (orderId) {
+        const docRef = doc(db, 'orders', orderId);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? [{ id: docSnap.id, ...docSnap.data() } as Order] : [];
+    }
+
+    if (deliveryPersonId) {
+        constraints.push(where('deliveryPersonId', '==', deliveryPersonId));
+    }
+    
+    constraints.push(orderBy('createdAt', 'desc'));
+
+    if (limit) {
+        constraints.push(firestoreLimit(limit));
+    }
+    
+    const q = query(collection(db, 'orders'), ...constraints);
+    const snapshot = await getDocs(q);
+    return snapshotToArray<Order>(snapshot);
+}
+
+
+// --- WRITE OPERATIONS ---
+
+// Orders
+export async function addOrder(orderData: Omit<Order, 'id'>) {
+    const docRef = await addDoc(collection(db, 'orders'), orderData);
+    return { id: docRef.id, ...orderData };
+}
+
+export async function updateOrderStatusInDb(orderId: string, status: OrderStatus) {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, { status });
+}
+
+// Menu Items
+export async function upsertMenuItemInDb(menuItemData: Omit<MenuItem, 'id'>, id?: string) {
+    const docRef = id ? doc(db, 'menuItems', id) : doc(collection(db, 'menuItems'));
+    await setDoc(docRef, menuItemData);
+}
+
+export async function deleteMenuItemInDb(id: string) {
+    await deleteDoc(doc(db, 'menuItems', id));
+}
+
+export async function updateMenuItemAvailability(id: string, available: boolean) {
+    const itemRef = doc(db, 'menuItems', id);
+    await updateDoc(itemRef, { available });
+    const updatedDoc = await getDoc(itemRef);
+    return { id: updatedDoc.id, ...updatedDoc.data() };
+}
+
+// Delivery People
+export async function upsertDeliveryPersonInDb(name: string, password?: string, id?: string) {
+    const docRef = id ? doc(db, 'deliveryPeople', id) : doc(collection(db, 'deliveryPeople'));
+    const currentData = id ? (await getDoc(docRef)).data() : {};
+    
+    const dataToSet: Partial<DeliveryPerson> = { name };
+    if (password) {
+        dataToSet.password = password;
+    }
+    
+    await setDoc(docRef, { ...currentData, ...dataToSet }, { merge: true });
+}
+
+export async function deleteDeliveryPersonInDb(id: string) {
+    await deleteDoc(doc(db, 'deliveryPeople', id));
+}
+
+// Categories
+export async function upsertCategoryInDb(categoryData: Omit<Category, 'id'>, id?: string) {
+    const docRef = id ? doc(db, 'categories', id) : doc(collection(db, 'categories'));
+    await setDoc(docRef, categoryData);
+}
+
+export async function deleteCategoryInDb(id: string) {
+    await deleteDoc(doc(db, 'categories', id));
+}

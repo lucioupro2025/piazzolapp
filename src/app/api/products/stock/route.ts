@@ -1,11 +1,12 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { menuItems } from '@/lib/data';
+import { fetchMenuItems, updateMenuItemAvailability } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 // GET handler to retrieve stock for all products
 export async function GET() {
+  const menuItems = await fetchMenuItems();
   const stockInfo = menuItems.map(item => ({
     id: item.id,
     name: item.name,
@@ -32,19 +33,17 @@ export async function PATCH(request: NextRequest) {
 
     const { id, available } = parsed.data;
 
-    const itemIndex = menuItems.findIndex(item => item.id === id);
+    const updatedItem = await updateMenuItemAvailability(id, available);
 
-    if (itemIndex === -1) {
+    if (!updatedItem) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
-
-    menuItems[itemIndex].available = available;
 
     // Revalidate paths where this data is used to reflect the change in the UI
     revalidatePath('/admin');
     revalidatePath('/');
 
-    return NextResponse.json(menuItems[itemIndex]);
+    return NextResponse.json(updatedItem);
   } catch (error) {
     console.error('Stock update failed via API:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });

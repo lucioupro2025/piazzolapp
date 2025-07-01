@@ -1,8 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { orders, menuItems } from '@/lib/data';
-import type { Order, MenuItem } from '@/lib/types';
+import { addOrder, fetchOrders, fetchMenuItems } from '@/lib/data';
+import type { Order, MenuItem, OrderStatus, CartItem } from '@/lib/types';
 
 interface OrderItem {
   menuItemId: string;
@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar que hay items en el pedido
     if (!Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json(
         { error: 'El pedido debe tener al menos un item' },
@@ -45,7 +44,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar teléfono
     if (!/^\d{8,15}$/.test(body.customerPhone.replace(/[\s\-\(\)]/g, ''))) {
       return NextResponse.json(
         { error: 'Formato de teléfono inválido' },
@@ -53,13 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Procesar y validar items del pedido
-    const processedItems: Omit<import('@/lib/types').CartItem, 'id'>[] = [];
+    const menuItems = await fetchMenuItems();
+    const processedItems: Omit<CartItem, 'id'>[] = [];
     let totalAmount = 0;
     const errors = [];
 
     for (const item of body.items) {
-      // Buscar el producto en el menú
       const menuItem = menuItems.find(m => m.id === item.menuItemId);
       
       if (!menuItem) {
@@ -67,13 +64,11 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Verificar disponibilidad
       if (!menuItem.available) {
         errors.push(`${menuItem.name} no está disponible`);
         continue;
       }
 
-      // Determinar precio según el tamaño
       let unitPrice = 0;
       let validSize = false;
 
@@ -115,13 +110,11 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Validar cantidad
       if (!item.quantity || item.quantity < 1) {
         errors.push(`Cantidad inválida para ${menuItem.name}`);
         continue;
       }
 
-      // Agregar item procesado
       processedItems.push({
         menuItemId: item.menuItemId,
         name: menuItem.name,
@@ -133,7 +126,6 @@ export async function POST(request: NextRequest) {
       totalAmount += unitPrice * item.quantity;
     }
 
-    // Si hay errores de validación, devolver error
     if (errors.length > 0) {
       return NextResponse.json(
         { 
@@ -144,38 +136,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear el pedido
-    const newOrder: Order = {
-      id: `P${Date.now()}`,
+    const orderDelay = body.delay || (body.deliveryType === 'envio' ? 45 : 30);
+    const estimatedTime = new Date(Date.now() + orderDelay * 60000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const newOrderData = {
       items: processedItems,
-      totalAmount: Math.round(totalAmount * 100) / 100, // Redondear a 2 decimales
+      totalAmount: Math.round(totalAmount * 100) / 100,
       customerName: body.customerName.trim(),
       customerPhone: body.customerPhone.trim(),
       address: body.address.trim(),
       deliveryType: body.deliveryType,
-      delay: body.delay || (body.deliveryType === 'envio' ? 45 : 30),
-      estimatedTime: new Date(Date.now() + (body.delay || (body.deliveryType === 'envio' ? 45 : 30)) * 60000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-      status: 'nuevo',
+      delay: orderDelay,
+      estimatedTime,
+      status: 'nuevo' as OrderStatus,
       deliveryPersonId: body.deliveryType === 'envio' ? undefined : undefined,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
+    
+    const newOrder = await addOrder(newOrderData);
 
-    // Agregar pedido al array de pedidos
-    orders.unshift(newOrder);
-
-    // Revalidate paths to update UI across the app
     revalidatePath('/');
     revalidatePath('/cocina');
     revalidatePath('/estadisticas');
 
-    // Respuesta exitosa
     return NextResponse.json({
       success: true,
       order: {
         id: newOrder.id,
-        totalAmount: newOrder.totalAmount,
-        estimatedTime: newOrder.estimatedTime,
-        status: newOrder.status,
+        ...newOrderData,
         items: processedItems.map(item => ({
           name: item.name,
           quantity: item.quantity,
@@ -199,30 +186,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET para consultar pedidos (útil para debugging)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('id');
-    const status = searchParams.get('status');
+    const status = searchParams.get('status') as OrderStatus | null;
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    let filteredOrders = [...orders];
-
-    // Filtrar por ID si se proporciona
-    if (orderId) {
-      filteredOrders = filteredOrders.filter(order => order.id === orderId);
-    }
-
-    // Filtrar por status si se proporciona
-    if (status) {
-      filteredOrders = filteredOrders.filter(order => order.status === status);
-    }
-
-    // Ordenar por fecha de creación (más reciente primero) y limitar
-    filteredOrders = filteredOrders
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit);
+    let filteredOrders = await fetchOrders({ status, limit, orderId });
 
     return NextResponse.json({
       success: true,

@@ -4,8 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import type { CartItem, OrderStatus } from './types';
-import { orders, deliveryPeople, menuItems, categories } from './data';
+import type { CartItem, OrderStatus, DeliveryPerson, MenuItem, Category } from './types';
+import { 
+  addOrder, updateOrderStatusInDb, 
+  fetchDeliveryPeople, upsertMenuItemInDb, 
+  deleteMenuItemInDb, upsertDeliveryPersonInDb,
+  deleteDeliveryPersonInDb, upsertCategoryInDb,
+  deleteCategoryInDb
+} from './data';
+import { getDriverSession } from './auth';
 
 interface OrderData {
   customerName: string;
@@ -20,8 +27,7 @@ interface OrderData {
 }
 
 export async function createOrder(data: OrderData) {
-  const newOrder = {
-    id: `P${Date.now()}`,
+  const newOrderData = {
     items: data.cart.map(({ id, ...rest }) => rest), // remove client-side-only id
     totalAmount: data.totalAmount,
     customerName: data.customerName,
@@ -35,29 +41,23 @@ export async function createOrder(data: OrderData) {
     createdAt: new Date().toISOString(),
   };
 
-  orders.unshift(newOrder);
+  await addOrder(newOrderData);
 
   revalidatePath('/');
   revalidatePath('/cocina');
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  const orderIndex = orders.findIndex(o => o.id === orderId);
-  if (orderIndex !== -1) {
-    orders[orderIndex].status = status;
-    revalidatePath('/cocina');
-    revalidatePath('/repartidores');
-    revalidatePath('/estadisticas');
-  }
+  await updateOrderStatusInDb(orderId, status);
+  revalidatePath('/cocina');
+  revalidatePath('/repartidores');
+  revalidatePath('/estadisticas');
 }
 
 export async function reopenOrder(orderId: string) {
-  const orderIndex = orders.findIndex(o => o.id === orderId);
-  if (orderIndex !== -1 && orders[orderIndex].status === 'cancelado') {
-    orders[orderIndex].status = 'nuevo';
-    revalidatePath('/cocina');
-    revalidatePath('/estadisticas');
-  }
+  await updateOrderStatusInDb(orderId, 'nuevo');
+  revalidatePath('/cocina');
+  revalidatePath('/estadisticas');
 }
 
 export async function loginDriver(prevState: { error: string | null }, formData: FormData) {
@@ -67,7 +67,8 @@ export async function loginDriver(prevState: { error: string | null }, formData:
     if (!name || !password) {
         return { error: 'Nombre y contraseña son requeridos.' };
     }
-
+    
+    const deliveryPeople = await fetchDeliveryPeople();
     const driver = deliveryPeople.find(d => d.name.toLowerCase() === name.toLowerCase() && d.password === password);
 
     if (driver) {
@@ -90,8 +91,8 @@ export async function logoutDriver() {
 
 // Menu Item Actions
 export async function upsertMenuItem(formData: FormData) {
-  const id = formData.get('id') as string;
-  const data = {
+  const id = (formData.get('id') as string) || undefined;
+  const data: Omit<MenuItem, 'id'> = {
     name: formData.get('name') as string,
     ingredients: formData.get('ingredients') as string,
     category: formData.get('category') as string,
@@ -102,52 +103,24 @@ export async function upsertMenuItem(formData: FormData) {
     available: formData.get('available') === 'on',
   };
 
-  if (id) {
-    const index = menuItems.findIndex(item => item.id === id);
-    if (index > -1) {
-      menuItems[index] = { ...menuItems[index], ...data };
-    }
-  } else {
-    menuItems.push({
-      id: `m-${Date.now()}`,
-      ...data,
-    });
-  }
+  await upsertMenuItemInDb(data, id);
   revalidatePath('/admin');
   revalidatePath('/');
 }
 
 export async function deleteMenuItem(id: string) {
-    const index = menuItems.findIndex(item => item.id === id);
-    if (index > -1) {
-        menuItems.splice(index, 1);
-    }
+    await deleteMenuItemInDb(id);
     revalidatePath('/admin');
     revalidatePath('/');
 }
 
 // Delivery Person Actions
 export async function upsertDeliveryPerson(formData: FormData) {
-    const id = formData.get('id') as string;
+    const id = (formData.get('id') as string) || undefined;
     const name = formData.get('name') as string;
     const password = formData.get('password') as string;
 
-    if (id) {
-        const index = deliveryPeople.findIndex(p => p.id === id);
-        if (index > -1) {
-            deliveryPeople[index].name = name;
-            // Only update password if a new one is provided
-            if (password) {
-                deliveryPeople[index].password = password;
-            }
-        }
-    } else {
-        deliveryPeople.push({
-            id: `d-${Date.now()}`,
-            name,
-            password
-        });
-    }
+    await upsertDeliveryPersonInDb(name, password, id);
     revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/cocina');
@@ -155,10 +128,7 @@ export async function upsertDeliveryPerson(formData: FormData) {
 }
 
 export async function deleteDeliveryPerson(id: string) {
-    const index = deliveryPeople.findIndex(p => p.id === id);
-    if (index > -1) {
-        deliveryPeople.splice(index, 1);
-    }
+    await deleteDeliveryPersonInDb(id);
     revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/cocina');
@@ -167,32 +137,19 @@ export async function deleteDeliveryPerson(id: string) {
 
 // Category Actions
 export async function upsertCategory(formData: FormData) {
-    const id = formData.get('id') as string;
-    const data = {
+    const id = (formData.get('id') as string) || undefined;
+    const data: Omit<Category, 'id'> = {
         name: formData.get('name') as string,
         hasMultipleSizes: formData.get('hasMultipleSizes') === 'on',
     };
 
-    if (id) {
-        const index = categories.findIndex(c => c.id === id);
-        if (index > -1) {
-            categories[index] = { ...categories[index], ...data };
-        }
-    } else {
-        categories.push({
-            id: `c-${Date.now()}`,
-            ...data
-        });
-    }
+    await upsertCategoryInDb(data, id);
     revalidatePath('/admin');
     revalidatePath('/');
 }
 
 export async function deleteCategory(id: string) {
-    const index = categories.findIndex(c => c.id === id);
-    if (index > -1) {
-        categories.splice(index, 1);
-    }
+    await deleteCategoryInDb(id);
     revalidatePath('/admin');
     revalidatePath('/');
 }

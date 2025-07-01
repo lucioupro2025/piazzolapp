@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const dynamic = 'force-dynamic';
 
 export default async function RepartidoresPage() {
-  const driver = getDriverSession();
+  const driver = await getDriverSession();
 
   if (!driver) {
     redirect("/repartidores/login");
